@@ -1,0 +1,8 @@
+fastapi[all]
+uvicorn
+pydantic
+SQLAlchemy
+asyncpg
+alembic
+geoalchemy2
+pydantic-settings
