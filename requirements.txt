@@ -6,3 +6,4 @@ asyncpg
 alembic
 geoalchemy2
 pydantic-settings
+psycopg2-binary

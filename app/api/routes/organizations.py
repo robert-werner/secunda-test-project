@@ -13,8 +13,17 @@ from app.schemas.organization import OrganizationRead, OrganizationList
 router = APIRouter()
 
 
-@router.get("/{org_id}", response_model=OrganizationRead)
-async def get_organization(org_id: int, db: AsyncSession = Depends(get_db)):
+@router.get(
+    "/{org_id}",
+    response_model=OrganizationRead,
+    summary="Получить организацию по ID",
+    description="Возвращает полную карточку организации, включая телефоны, здание и все виды деятельности.",
+    responses={404: {"description": "Организация не найдена"}}
+)
+async def get_organization(
+    org_id: int,
+    db: AsyncSession = Depends(get_db)
+):
     query = (
         select(Organization)
         .where(Organization.id == org_id)
@@ -35,13 +44,24 @@ async def get_organization(org_id: int, db: AsyncSession = Depends(get_db)):
     return org
 
 
-@router.get("", response_model=list[OrganizationList])
+@router.get(
+    "",
+    response_model=list[OrganizationList],
+    summary="Поиск организаций",
+    description=(
+        "Поиск организаций по различным критериям: название, здание, вид деятельности. "
+        "Поддерживает рекурсивный поиск по дереву деятельности (например, искать все 'Еда' -> найдутся и 'Мясные')."
+    )
+)
 async def search_organizations(
-        name: str | None = None,
-        building_id: int | None = None,
-        activity_id: int | None = None,
-        recursive: bool = False,
-        db: AsyncSession = Depends(get_db)
+    name: str | None = Query(None, description="Частичное совпадение названия (case-insensitive)"),
+    building_id: int | None = Query(None, description="ID здания для фильтрации"),
+    activity_id: int | None = Query(None, description="ID вида деятельности"),
+    recursive: bool = Query(
+        False,
+        description="Если true, ищет также во всех дочерних категориях выбранной деятельности."
+    ),
+    db: AsyncSession = Depends(get_db)
 ):
     query = (
         select(Organization)
@@ -86,12 +106,17 @@ async def search_organizations(
     return result.scalars().unique().all()
 
 
-@router.get("/geo/radius", response_model=list[OrganizationList])
+@router.get(
+    "/geo/radius",
+    response_model=list[OrganizationList],
+    summary="Поиск организаций в радиусе",
+    description="Находит все организации, здания которых находятся в пределах заданного радиуса (в метрах) от точки."
+)
 async def search_organizations_by_radius(
-        lat: Annotated[float, Query(ge=-90, le=90)],
-        lon: Annotated[float, Query(ge=-180, le=180)],
-        radius_m: Annotated[float, Query(gt=0)],
-        db: AsyncSession = Depends(get_db)
+    lat: Annotated[float, Query(ge=-90, le=90, description="Широта центра поиска")],
+    lon: Annotated[float, Query(ge=-180, le=180, description="Долгота центра поиска")],
+    radius_m: Annotated[float, Query(gt=0, description="Радиус поиска в метрах")],
+    db: AsyncSession = Depends(get_db)
 ):
     point = func.ST_SetSRID(func.ST_MakePoint(lon, lat), 4326)
 
@@ -112,13 +137,18 @@ async def search_organizations_by_radius(
     return result.scalars().all()
 
 
-@router.get("/geo/box", response_model=list[OrganizationList])
+@router.get(
+    "/geo/box",
+    response_model=list[OrganizationList],
+    summary="Поиск организаций в прямоугольной области",
+    description="Находит организации внутри заданного прямоугольника координат (bounding box)."
+)
 async def search_organizations_by_box(
-        min_lat: Annotated[float, Query(ge=-90, le=90)],
-        min_lon: Annotated[float, Query(ge=-180, le=180)],
-        max_lat: Annotated[float, Query(ge=-90, le=90)],
-        max_lon: Annotated[float, Query(ge=-180, le=180)],
-        db: AsyncSession = Depends(get_db)
+    min_lat: Annotated[float, Query(ge=-90, le=90, description="Минимальная широта (юг)")],
+    min_lon: Annotated[float, Query(ge=-180, le=180, description="Минимальная долгота (запад)")],
+    max_lat: Annotated[float, Query(ge=-90, le=90, description="Максимальная широта (север)")],
+    max_lon: Annotated[float, Query(ge=-180, le=180, description="Максимальная долгота (восток)")],
+    db: AsyncSession = Depends(get_db)
 ):
     bbox = func.ST_MakeEnvelope(min_lon, min_lat, max_lon, max_lat, 4326)
 

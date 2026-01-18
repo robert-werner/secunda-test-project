@@ -2,7 +2,17 @@
 name = "org-catalog"
 version = "0.1.0"
 requires-python = ">=3.12"
-dependencies = {file = ["requirements.txt"]}
+dependencies = [
+    "fastapi[all]",
+    "uvicorn",
+    "pydantic",
+    "SQLAlchemy",
+    "asyncpg",
+    "alembic",
+    "geoalchemy2",
+    "pydantic-settings",
+    "psycopg2-binary"
+]
 
 [tool.alembic]
 # (не обязательно; обычно достаточно alembic.ini)
